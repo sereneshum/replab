@@ -1,7 +1,10 @@
 function [ a, b, V ] = LanczosTridiagonalization( A, esp )
 
+    %   Computes the Lanczos Tridiagonalization of A using complete
+    %   reorthonormalization.
+    %
     %   The value m is the number of distinct eigenvalues of A and is
-    %   determined computationally
+    %   determined computationally.
     %
     %   Bulk equation (1 < j < m):
     %       A v(j) = b(j) v(j+1) + a(j) v(j) + b(j-1) v(j-1) where v(j) = V(:,j)
@@ -16,7 +19,7 @@ function [ a, b, V ] = LanczosTridiagonalization( A, esp )
         error('LanczosTridiagonalization requires input matrix A that is Hermitian');
     end
     if nargin < 2
-        esp = 10e-10;
+        esp = 1e-10;
     end
 
     % since m <= n always, allocate enough space for the worst case scenario
@@ -24,7 +27,7 @@ function [ a, b, V ] = LanczosTridiagonalization( A, esp )
     m = -1;
     n = length(A);
     a = zeros(1,n);
-    b = zeros(1,n-1);
+    b = zeros(1,n);
     V = zeros(n,n);
 
     % abbreviated initial iteration step
@@ -43,7 +46,7 @@ function [ a, b, V ] = LanczosTridiagonalization( A, esp )
         a(j) = real(V(:,j)' * v); % since A is Hermitian, a is always real
         v = v - a(j) * V(:,j);
 
-        % TODO: this step seems pointless because of the reothrogonalization
+        % TODO: this step seems pointless because of the reorthogonalization
         if j > 1
             v = v - b(j-1) * V(:,j-1);
         end
@@ -54,20 +57,22 @@ function [ a, b, V ] = LanczosTridiagonalization( A, esp )
             v = v - ( V(:,j-i)' * v ) * V(:,j-i);
         end
         % and then normalize if its a substantial vector
-        b(j) = norm(v); 
-        if b(j) < esp 
+        b(j) = norm(v);
+        if b(j) < esp
             % if the new vector is smaller than some tolerance,
             % then the Krylov subspace has been spanned, stop
             m = j;
             break
         end
-        V(:,j+1) = v/b(j); 
+        V(:,j+1) = v/b(j);
     end
 
+    % if m < 0, then it was never changed from m = -1
+    % therefore, m = n and no truncation of a, b, or V is needed
     if m > 0
-        % Truncate a, b, V according to the value of m 
+        % truncate a, b, V according to the value of m
         a = a(1:m);
-        b = b(1:m-1);
+        b = b(1:m-1); % b(m) is defined at this point, but close to zero and not needed
         V = V(:,1:m);
     end
 end
