@@ -9,14 +9,14 @@ function [ a, b, V ] = LanczosTridiagonalization( A, esp )
     %   Returns:
     %       a :: [1 x m] row-vector of diagonal values of T
     %       b :: [1 x m] row-vector of off-diagonal values of T (always starts with zero)
-    %       V :: [n x m] isometry matrix which satisfies V* A V = T
+    %       V :: [n x m] isometry matrix which satisfies V' A V = T
 
     % Parsing input parameters
     if nargin < 1
         error('LanczosTridiagonalization requires input matrix A that is Hermitian');
     end
     if nargin < 2
-        esp = 10e-8;
+        esp = 10e-10;
     end
 
     % since m <= n always, allocate enough space for the worst case scenario
@@ -24,7 +24,7 @@ function [ a, b, V ] = LanczosTridiagonalization( A, esp )
     m = -1;
     n = length(A);
     a = zeros(1,n);
-    b = zeros(1,n);
+    b = zeros(1,n-1);
     V = zeros(n,n);
 
     % abbreviated initial iteration step
@@ -40,8 +40,13 @@ function [ a, b, V ] = LanczosTridiagonalization( A, esp )
         % 1) v is orthogonal to all V(:,k) for all k < j+1
         % 2) v is in the Krylov subspace of A w.r.t. V(:,1)
         v = A * V(:,j);
-        a(j) = V(:,j)' * v;
+        a(j) = real(V(:,j)' * v); % since A is Hermitian, a is always real
         v = v - a(j) * V(:,j);
+
+        % TODO: this step seems pointless because of the reothrogonalization
+        if j > 1
+            v = v - b(j-1) * V(:,j-1);
+        end
 
         % in order to ensure orthonormality of columns of V,
         % reorthogonalize with respect to previous vectors
@@ -62,7 +67,7 @@ function [ a, b, V ] = LanczosTridiagonalization( A, esp )
     if m > 0
         % Truncate a, b, V according to the value of m 
         a = a(1:m);
-        b = b(1:m);
+        b = b(1:m-1);
         V = V(:,1:m);
     end
 end
